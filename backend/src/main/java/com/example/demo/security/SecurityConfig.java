@@ -32,16 +32,21 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable) // Disabled because we are using JWTs
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // Allow public access to login and registration endpoints
+
+
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Allow public access to streamed audio files
+                        .requestMatchers("/api/songs/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
-                        // Protect Creator Studio endpoints so only ARTISTS can access them
+
+
                         .requestMatchers("/api/artist/**").hasRole("ARTIST")
-                        // All other endpoints require the user to be logged in
+
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -51,7 +56,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Automatically hashes passwords using BCrypt so they aren't stored in plain text
         return new BCryptPasswordEncoder();
     }
 
@@ -63,7 +67,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow the Angular frontend to communicate with this backend
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
