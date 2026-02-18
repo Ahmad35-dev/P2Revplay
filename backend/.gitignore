@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Compiled Output
+backend/target/
