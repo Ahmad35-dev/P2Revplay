@@ -18,16 +18,21 @@ public class SongService {
     }
 
     public List<SongDTO> getAllSongs() {
-        List<Song> songs = songRepository.findAll();
-        return songs.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return songRepository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public List<SongDTO> searchSongsByTitle(String title) {
-        List<Song> songs = songRepository.findByTitleContainingIgnoreCase(title);
-        return songs.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return songRepository.findByTitleContainingIgnoreCase(title)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Helper method to convert the Database Entity into the Frontend DTO
+    // NEW: Pass the filters to the repository
+    public List<SongDTO> filterSongs(String genre, String artistName, String albumName, Integer releaseYear) {
+        return songRepository.filterSongs(genre, artistName, albumName, releaseYear)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    // Helper method to convert Entity to DTO safely
     private SongDTO mapToDTO(Song song) {
         SongDTO dto = new SongDTO();
         dto.setSongId(song.getSongId());
@@ -38,12 +43,13 @@ public class SongService {
         dto.setAudioFileUrl(song.getAudioFileUrl());
         dto.setCoverImageUrl(song.getCoverImageUrl());
 
-        // Safely extract artist name if it exists
         if (song.getArtist() != null && song.getArtist().getUser() != null) {
             dto.setArtistName(song.getArtist().getUser().getName());
-        } else {
-            dto.setArtistName("Unknown Artist");
         }
+        if (song.getAlbum() != null) {
+            dto.setAlbumName(song.getAlbum().getTitle());
+        }
+
         return dto;
     }
 }

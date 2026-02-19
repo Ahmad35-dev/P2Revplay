@@ -8,7 +8,8 @@ public class SongDTO {
     private Long playCount;
     private String audioFileUrl;
     private String coverImageUrl;
-    private String artistName; // We just send the name, not the whole Artist object!
+    private String artistName;
+    private String albumName; // NEW: Added for the frontend to display
 
     // --- Getters and Setters ---
     public Long getSongId() { return songId; }
@@ -34,4 +35,7 @@ public class SongDTO {
 
     public String getArtistName() { return artistName; }
     public void setArtistName(String artistName) { this.artistName = artistName; }
+
+    public String getAlbumName() { return albumName; }
+    public void setAlbumName(String albumName) { this.albumName = albumName; }
 }
