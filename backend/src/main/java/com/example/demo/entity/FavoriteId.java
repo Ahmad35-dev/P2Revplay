@@ -4,19 +4,24 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class FavoriteId implements Serializable {
+
+    // These MUST match the names of the @ManyToOne fields in Favorite.java
     private Long user;
     private Long song;
 
     public FavoriteId() {}
 
-    // --- Getters and Setters ---
+    public FavoriteId(Long user, Long song) {
+        this.user = user;
+        this.song = song;
+    }
+
     public Long getUser() { return user; }
     public void setUser(Long user) { this.user = user; }
 
     public Long getSong() { return song; }
     public void setSong(Long song) { this.song = song; }
 
-    // Required by Spring Boot for composite keys
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
