@@ -88,4 +88,21 @@ public class HistoryService {
         }
         return dto;
     }
+    // NEW FEATURE: Calculate total listening time
+    public String getTotalListeningTime(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Long totalSeconds = historyRepository.calculateTotalListeningTimeInSeconds(user);
+
+        // Logic to make it readable: e.g., "120 minutes" or "2 hours"
+        long minutes = totalSeconds / 60;
+        if (minutes < 60) {
+            return minutes + " minutes";
+        } else {
+            long hours = minutes / 60;
+            long remainingMinutes = minutes % 60;
+            return hours + " hours, " + remainingMinutes + " minutes";
+        }
+    }
 }

@@ -51,4 +51,11 @@ public class HistoryController {
         historyService.clearHistory(email);
         return ResponseEntity.ok("{\"message\": \"Listening history cleared successfully.\"}");
     }
+    // NEW FEATURE: GET: http://localhost:8080/api/history/stats/time
+    @GetMapping("/stats/time")
+    public ResponseEntity<String> getTotalTime(Authentication authentication) {
+        String email = authentication.getName();
+        String timeStats = historyService.getTotalListeningTime(email);
+        return ResponseEntity.ok("{\"totalListeningTime\": \"" + timeStats + "\"}");
+    }
 }
