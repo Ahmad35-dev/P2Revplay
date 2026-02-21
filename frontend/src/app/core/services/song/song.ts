@@ -12,7 +12,6 @@ export class Song {
   private authService = inject(AuthService);
   private apiUrl = `${environment.apiUrl}/songs`;
 
-  // --- NEW: Fetch all songs from the database ---
   getAllSongs(): Observable<any[]> {
     const token = this.authService.getToken(); 
     const headers = new HttpHeaders({
@@ -21,12 +20,25 @@ export class Song {
     return this.http.get<any[]>(this.apiUrl, { headers });
   }
 
-  // --- EXISTING: Upload Song ---
   uploadSong(songData: FormData): Observable<any> {
     const token = this.authService.getToken(); 
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${token}`
     });
     return this.http.post(this.apiUrl, songData, { headers });
+  }
+
+  // --- NEW: Search songs by title ---
+  searchSongsByTitle(title: string): Observable<any[]> {
+    const token = this.authService.getToken(); 
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    return this.http.get<any[]>(`${this.apiUrl}/search?title=${title}`, { headers });
+  }
+
+  // --- NEW: Filter songs by genre ---
+  filterSongsByGenre(genre: string): Observable<any[]> {
+    const token = this.authService.getToken(); 
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    return this.http.get<any[]>(`${this.apiUrl}/filter?genre=${genre}`, { headers });
   }
 }

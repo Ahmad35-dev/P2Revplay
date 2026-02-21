@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
+import { FormsModule } from '@angular/forms'; // 👈 NEW: Required for the search input
 import { AuthService } from '../../core/services/auth'; 
 import { Song } from '../../core/services/song/song'; 
 import { environment } from '../../../environments/environment'; 
@@ -8,7 +9,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink], 
+  imports: [CommonModule, RouterLink, FormsModule], // 👈 NEW: Added FormsModule
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
@@ -21,8 +22,11 @@ export class Home implements OnInit {
   userRole: string = '';
   songs: any[] = []; 
   
-  // --- NEW: Audio Player Variables ---
   currentSong: any = null;
+
+  // --- NEW: Search and Filter Variables ---
+  searchQuery: string = '';
+  selectedGenre: string = '';
 
   ngOnInit() {
     const storedName = this.authService.getUserName();
@@ -41,15 +45,43 @@ export class Home implements OnInit {
     });
   }
 
-  // --- NEW: Set the clicked song as the active song ---
+  // --- NEW: Search Logic ---
+  onSearch() {
+    if (this.searchQuery.trim() === '') {
+      this.fetchSongs(); // If empty, load all songs
+      return;
+    }
+    this.songService.searchSongsByTitle(this.searchQuery).subscribe({
+      next: (data) => this.songs = data,
+      error: (err) => console.error('Search failed:', err)
+    });
+  }
+
+  // --- NEW: Filter Logic ---
+  onFilterChange() {
+    if (this.selectedGenre === '') {
+      this.fetchSongs(); // If "All Genres" is selected, load all
+      return;
+    }
+    this.songService.filterSongsByGenre(this.selectedGenre).subscribe({
+      next: (data) => this.songs = data,
+      error: (err) => console.error('Filter failed:', err)
+    });
+  }
+
+  // --- NEW: Clear Filters ---
+  clearFilters() {
+    this.searchQuery = '';
+    this.selectedGenre = '';
+    this.fetchSongs();
+  }
+
   playSong(song: any) {
     console.log('Playing:', song.title);
     this.currentSong = song;
   }
 
-  // --- NEW: Generate the URL for the audio tag ---
   getAudioUrl(fileName: string): string {
-    // We will build this endpoint in Spring Boot next if it doesn't exist yet!
     return `${environment.apiUrl}/songs/play/${fileName}`;
   }
 

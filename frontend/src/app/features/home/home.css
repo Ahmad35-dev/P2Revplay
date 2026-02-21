@@ -4,7 +4,6 @@
   color: white;
   font-family: sans-serif;
   padding: 40px;
-  /* Added padding so the sticky player doesn't cover the bottom row of songs */
   padding-bottom: 120px; 
 }
 
@@ -42,6 +41,49 @@ h1 { color: #1DB954; margin: 0 0 5px 0; font-size: 2.5rem; }
 h3 { font-size: 1.8rem; margin-bottom: 20px; }
 .no-songs { color: #b3b3b3; font-style: italic; }
 
+/* --- NEW: Search and Filter Bar Styles --- */
+.search-filter-bar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+  align-items: center;
+}
+
+.search-input, .genre-filter {
+  padding: 12px 20px;
+  background: #282828;
+  border: 1px solid #333;
+  border-radius: 30px;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-input {
+  flex-grow: 1; /* Makes the search bar take up most of the space */
+  max-width: 400px;
+}
+
+.search-input:focus, .genre-filter:focus {
+  border-color: #1DB954;
+}
+
+.clear-btn {
+  background: transparent;
+  color: #b3b3b3;
+  border: 1px solid #b3b3b3;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clear-btn:hover {
+  color: white;
+  border-color: white;
+}
+
 .song-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -54,7 +96,7 @@ h3 { font-size: 1.8rem; margin-bottom: 20px; }
   border-radius: 8px;
   transition: background 0.3s;
   cursor: pointer;
-  position: relative; /* Crucial for the play button overlay */
+  position: relative;
 }
 
 .song-card:hover { background: #282828; }
@@ -69,7 +111,6 @@ h3 { font-size: 1.8rem; margin-bottom: 20px; }
   color: #1DB954;
 }
 
-/* --- NEW: Play Overlay on Hover --- */
 .play-overlay {
   position: absolute;
   top: 50%;
@@ -84,18 +125,16 @@ h3 { font-size: 1.8rem; margin-bottom: 20px; }
   align-items: center;
   border-radius: 50%;
   font-size: 1.5rem;
-  opacity: 0; /* Hidden by default */
+  opacity: 0; 
   transition: opacity 0.3s ease, transform 0.3s ease;
   box-shadow: 0 8px 15px rgba(0,0,0,0.3);
 }
 
-/* Show the green play button when hovering over the song card */
 .song-card:hover .play-overlay {
   opacity: 1;
-  transform: translate(-50%, -55%); /* Slight upward floating effect */
+  transform: translate(-50%, -55%); 
 }
 
-/* --- NEW: Sticky Player Bar at the Bottom --- */
 .music-player-bar {
   position: fixed;
   bottom: 0;
@@ -113,13 +152,12 @@ h3 { font-size: 1.8rem; margin-bottom: 20px; }
 }
 
 .now-playing-info {
-  width: 25%; /* Keeps the title on the left side */
+  width: 25%;
 }
 
 .now-playing-info h4 { margin: 0 0 5px 0; color: #1DB954; font-size: 1.1rem; }
 .now-playing-info p { margin: 0; color: #b3b3b3; font-size: 0.85rem; }
 
-/* The actual HTML5 audio control bar */
 audio {
   width: 50%;
   height: 40px;
@@ -127,7 +165,6 @@ audio {
   border-radius: 30px;
 }
 
-/* A blank div to balance out the right side of the flexbox */
 .music-player-bar::after {
   content: '';
   width: 25%;

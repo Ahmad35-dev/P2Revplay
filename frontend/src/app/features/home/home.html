@@ -16,8 +16,31 @@
   <div class="music-feed">
     <h3>Discover Tracks</h3>
     
+    <div class="search-filter-bar">
+      <input 
+        type="text" 
+        placeholder="Search for a song..." 
+        [(ngModel)]="searchQuery" 
+        (keyup)="onSearch()"
+        class="search-input"
+      >
+      
+      <select [(ngModel)]="selectedGenre" (change)="onFilterChange()" class="genre-filter">
+        <option value="">All Genres</option>
+        <option value="Pop">Pop</option>
+        <option value="Rock">Rock</option>
+        <option value="Hip-Hop">Hip-Hop</option>
+        <option value="Electronic">Electronic</option>
+        <option value="Classical">Classical</option>
+      </select>
+
+      <button (click)="clearFilters()" class="clear-btn" *ngIf="searchQuery || selectedGenre">
+        Clear
+      </button>
+    </div>
+    
     <div *ngIf="songs.length === 0" class="no-songs">
-      <p>No songs available yet. Be the first to upload!</p>
+      <p>No songs found. Try a different search, or be the first to upload!</p>
     </div>
 
     <div class="song-grid">
