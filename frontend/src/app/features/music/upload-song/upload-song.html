@@ -22,7 +22,12 @@
 
       <div class="form-group file-upload">
         <label for="audioFile">Audio File (.mp3)</label>
-        <input type="file" id="audioFile" (change)="onFileSelected($event)" accept="audio/*" required>
+        <input type="file" id="audioFile" (change)="onFileSelected($event, 'audio')" accept="audio/*" required>
+      </div>
+
+      <div class="form-group file-upload">
+        <label for="coverImage">Cover Art (.jpg, .png)</label>
+        <input type="file" id="coverImage" (change)="onFileSelected($event, 'image')" accept="image/*">
       </div>
 
       <button type="submit" class="upload-btn" [disabled]="isUploading">

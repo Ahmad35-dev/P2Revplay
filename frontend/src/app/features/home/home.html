@@ -45,12 +45,18 @@
 
     <div class="song-grid">
       <div class="song-card" *ngFor="let song of songs" (click)="playSong(song)">
+        
+        <div class="album-art">
+          <img *ngIf="song.coverImageUrl" [src]="getCoverImageUrl(song.coverImageUrl)" alt="Album Art">
+          <div *ngIf="!song.coverImageUrl" class="placeholder-art">🎵</div>
+          <div class="play-overlay">▶</div>
+        </div>
+
         <div class="song-info">
           <h4>{{ song.title }}</h4>
           <p class="artist-name">{{ song.artistName || 'Unknown Artist' }}</p>
           <span class="genre-badge">{{ song.genre }}</span>
         </div>
-        <div class="play-overlay">▶</div>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
-import { FormsModule } from '@angular/forms'; // 👈 NEW: Required for the search input
+import { FormsModule } from '@angular/forms'; 
 import { AuthService } from '../../core/services/auth'; 
 import { Song } from '../../core/services/song/song'; 
 import { environment } from '../../../environments/environment'; 
@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule], // 👈 NEW: Added FormsModule
+  imports: [CommonModule, RouterLink, FormsModule], 
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
@@ -24,7 +24,6 @@ export class Home implements OnInit {
   
   currentSong: any = null;
 
-  // --- NEW: Search and Filter Variables ---
   searchQuery: string = '';
   selectedGenre: string = '';
 
@@ -45,10 +44,9 @@ export class Home implements OnInit {
     });
   }
 
-  // --- NEW: Search Logic ---
   onSearch() {
     if (this.searchQuery.trim() === '') {
-      this.fetchSongs(); // If empty, load all songs
+      this.fetchSongs(); 
       return;
     }
     this.songService.searchSongsByTitle(this.searchQuery).subscribe({
@@ -57,10 +55,9 @@ export class Home implements OnInit {
     });
   }
 
-  // --- NEW: Filter Logic ---
   onFilterChange() {
     if (this.selectedGenre === '') {
-      this.fetchSongs(); // If "All Genres" is selected, load all
+      this.fetchSongs(); 
       return;
     }
     this.songService.filterSongsByGenre(this.selectedGenre).subscribe({
@@ -69,7 +66,6 @@ export class Home implements OnInit {
     });
   }
 
-  // --- NEW: Clear Filters ---
   clearFilters() {
     this.searchQuery = '';
     this.selectedGenre = '';
@@ -83,6 +79,14 @@ export class Home implements OnInit {
 
   getAudioUrl(fileName: string): string {
     return `${environment.apiUrl}/songs/play/${fileName}`;
+  }
+
+  // --- NEW: Generate the URL for the cover image ---
+  getCoverImageUrl(fileName: string | null): string {
+    if (!fileName) {
+      return 'assets/default-cover.jpg'; // Fallback just in case
+    }
+    return `${environment.apiUrl}/songs/image/${fileName}`;
   }
 
   onLogout() {
