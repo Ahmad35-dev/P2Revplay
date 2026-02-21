@@ -10,7 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files; // NEW: Required to detect image types
+import java.nio.file.Files;
 import java.util.List;
 
 @RestController
@@ -95,14 +95,12 @@ public class SongController {
                 .body(resource);
     }
 
-    // --- NEW: Image Serving Endpoint ---
     @GetMapping("/image/{fileName:.+}")
     public ResponseEntity<Resource> getImage(@PathVariable String fileName) {
         Resource resource = fileStorageService.loadFileAsResource(fileName);
 
-        String contentType = "image/jpeg"; // Default fallback
+        String contentType = "image/jpeg";
         try {
-            // This cleverly detects if it's a PNG or JPG automatically!
             contentType = Files.probeContentType(resource.getFile().toPath());
         } catch (Exception e) {
             // Ignore error and use default
@@ -111,5 +109,25 @@ public class SongController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
+    }
+
+    // --- NEW: LIKED SONGS ENDPOINTS ---
+
+    // Toggle a like on a song (Requires Login)
+    @PostMapping("/{songId}/like")
+    public ResponseEntity<Boolean> toggleLikeSong(Authentication authentication, @PathVariable Long songId) {
+        return ResponseEntity.ok(songService.toggleLikeSong(authentication.getName(), songId));
+    }
+
+    // Check if the current user liked a specific song
+    @GetMapping("/{songId}/like-status")
+    public ResponseEntity<Boolean> getLikeStatus(Authentication authentication, @PathVariable Long songId) {
+        return ResponseEntity.ok(songService.isSongLikedByUser(authentication.getName(), songId));
+    }
+
+    // Get the user's Favorite Songs list
+    @GetMapping("/liked")
+    public ResponseEntity<List<SongDTO>> getLikedSongs(Authentication authentication) {
+        return ResponseEntity.ok(songService.getLikedSongs(authentication.getName()));
     }
 }

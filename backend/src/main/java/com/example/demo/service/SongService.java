@@ -3,11 +3,13 @@ package com.example.demo.service;
 import com.example.demo.dto.SongDTO;
 import com.example.demo.entity.Album;
 import com.example.demo.entity.Artist;
+import com.example.demo.entity.LikedSong;
 import com.example.demo.entity.Song;
 import com.example.demo.entity.User;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.AlbumRepository;
 import com.example.demo.repository.ArtistRepository;
+import com.example.demo.repository.LikedSongRepository;
 import com.example.demo.repository.SongRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,15 +28,17 @@ public class SongService {
     private final ArtistRepository artistRepository;
     private final AlbumRepository albumRepository;
     private final FileStorageService fileStorageService;
+    private final LikedSongRepository likedSongRepository; // 👈 NEW
 
     public SongService(SongRepository songRepository, UserRepository userRepository,
                        ArtistRepository artistRepository, AlbumRepository albumRepository,
-                       FileStorageService fileStorageService) {
+                       FileStorageService fileStorageService, LikedSongRepository likedSongRepository) {
         this.songRepository = songRepository;
         this.userRepository = userRepository;
         this.artistRepository = artistRepository;
         this.albumRepository = albumRepository;
         this.fileStorageService = fileStorageService;
+        this.likedSongRepository = likedSongRepository;
     }
 
     public List<SongDTO> getAllSongs() {
@@ -61,6 +66,41 @@ public class SongService {
         return songRepository.findByArtist(artist)
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
+
+    // --- NEW: LIKED SONGS LOGIC ---
+
+    @Transactional
+    public boolean toggleLikeSong(String email, Long songId) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+        Optional<LikedSong> existingLike = likedSongRepository.findByUserAndSong(user, song);
+        if (existingLike.isPresent()) {
+            // If already liked, unlike it!
+            likedSongRepository.delete(existingLike.get());
+            return false;
+        } else {
+            // If not liked, save a new like!
+            likedSongRepository.save(new LikedSong(user, song));
+            return true;
+        }
+    }
+
+    public boolean isSongLikedByUser(String email, Long songId) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+        return likedSongRepository.existsByUserAndSong(user, song);
+    }
+
+    public List<SongDTO> getLikedSongs(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return likedSongRepository.findByUser(user).stream()
+                .map(LikedSong::getSong) // Get the song from the LikedSong bridge table
+                .map(this::mapToDTO)     // Convert to DTO for the frontend
+                .collect(Collectors.toList());
+    }
+
+    // --- END NEW LOGIC ---
 
     @Transactional
     public SongDTO uploadSong(String email, String title, String genre, Integer duration,
@@ -130,16 +170,13 @@ public class SongService {
         songRepository.delete(song);
     }
 
-    // 👈 THIS IS THE METHOD THAT WAS UPDATED!
     private Artist getArtistByEmail(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Try to find the artist profile. If it doesn't exist, auto-create it!
         return artistRepository.findByUser(user).orElseGet(() -> {
             System.out.println("Auto-creating blank Artist profile for: " + email);
             Artist newArtist = new Artist();
-            newArtist.setUser(user); // Link it to the current user
-            // Save and return the newly created profile so the upload can continue
+            newArtist.setUser(user);
             return artistRepository.save(newArtist);
         });
     }
