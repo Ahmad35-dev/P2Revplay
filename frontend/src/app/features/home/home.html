@@ -10,6 +10,10 @@
         + Upload Music
       </button>
 
+      <button *ngIf="userRole === 'ARTIST'" routerLink="/my-music" class="upload-btn">
+         My Uploads
+      </button>
+
       <button routerLink="/favorites" class="upload-btn">
         ❤️ Favorites
       </button>
