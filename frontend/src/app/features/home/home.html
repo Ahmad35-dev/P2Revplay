@@ -31,6 +31,34 @@
   </header>
 
   <div class="music-feed">
+    
+    <div class="recently-played-section" *ngIf="recentHistory.length > 0" style="margin-bottom: 50px;">
+      <h3>Recently Played </h3>
+      
+      <div class="song-grid" style="display: flex; overflow-x: auto; padding-bottom: 15px; gap: 20px;">
+        
+        <div class="song-card" *ngFor="let history of recentHistory" (click)="playSong(history)" style="min-width: 200px;">
+          
+          <div class="album-art">
+            <img *ngIf="history.coverImageUrl" [src]="getCoverImageUrl(history.coverImageUrl)" alt="Album Art">
+            <div *ngIf="!history.coverImageUrl" class="placeholder-art">🎵</div>
+            <div class="play-overlay">▶</div>
+          </div>
+
+          <div class="song-info">
+            <div class="song-title-row">
+              <h4>{{ history.songTitle }}</h4>
+            </div>
+            <p class="artist-name">{{ history.artistName || 'Unknown Artist' }}</p>
+            
+            <div class="song-stats">
+              <span class="play-count">Played: {{ history.playedAt | date:'shortTime' }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
     <h3>Discover Tracks</h3>
     
     <div class="search-filter-bar">

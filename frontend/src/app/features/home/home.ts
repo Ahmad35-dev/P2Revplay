@@ -4,7 +4,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; 
 import { AuthService } from '../../core/services/auth'; 
 import { Song } from '../../core/services/song/song'; 
-import { Playlist } from '../../core/services/playlist/playlist'; //  NEW: Import Playlist Service
+import { Playlist } from '../../core/services/playlist/playlist'; 
+import { History } from '../../core/services/history/history'; // NEW: Import History Service
 import { environment } from '../../../environments/environment'; 
 
 @Component({
@@ -17,7 +18,8 @@ import { environment } from '../../../environments/environment';
 export class Home implements OnInit {
   private authService = inject(AuthService);
   private songService = inject(Song);
-  private playlistService = inject(Playlist); //  NEW: Inject Playlist Service
+  private playlistService = inject(Playlist); 
+  private historyService = inject(History); // NEW: Inject History Service
   private router = inject(Router);
 
   userName: string = '';
@@ -31,10 +33,13 @@ export class Home implements OnInit {
 
   likedSongIds: Set<number> = new Set<number>();
 
-  //  NEW: Playlist Modal Variables
+  // Playlist Modal Variables
   myPlaylists: any[] = [];
   showPlaylistModal: boolean = false;
   selectedSongForPlaylist: any = null;
+
+  // NEW: Array to hold recently played songs
+  recentHistory: any[] = [];
 
   ngOnInit() {
     const storedName = this.authService.getUserName();
@@ -42,6 +47,7 @@ export class Home implements OnInit {
     this.userRole = this.authService.getRole() || 'USER';
     this.fetchSongs();
     this.fetchLikedSongs();
+    this.fetchRecentHistory(); // NEW: Load history on startup
   }
 
   fetchSongs() {
@@ -59,6 +65,14 @@ export class Home implements OnInit {
         this.likedSongIds = new Set(data.map((song: any) => song.songId));
       },
       error: (err: any) => console.error('Failed to load liked songs:', err)
+    });
+  }
+
+  // NEW METHOD: Fetch history from backend
+  fetchRecentHistory() {
+    this.historyService.getRecentHistory().subscribe({
+      next: (data: any[]) => this.recentHistory = data,
+      error: (err: any) => console.error('Failed to load history:', err)
     });
   }
 
@@ -109,25 +123,43 @@ export class Home implements OnInit {
     this.fetchSongs();
   }
 
+  // UPDATED: Handle playing AND logging to history!
   playSong(song: any) {
-    console.log('Playing:', song.title);
-    this.currentSong = song;
+    console.log('Playing:', song.title || song.songTitle);
+    
+    // Support playing both regular songs and history DTOs
+    this.currentSong = {
+      songId: song.songId,
+      title: song.title || song.songTitle,
+      artistName: song.artistName,
+      audioFileUrl: song.audioFileUrl || null 
+    };
 
-    this.songService.incrementPlayCount(song.songId).subscribe({
-      next: () => {
-        song.playCount = (song.playCount || 0) + 1;
-      },
-      error: (err: any) => console.error('Failed to update play count:', err)
-    });
+    // Update global play count visually (if it's a regular song card)
+    if (song.playCount !== undefined) {
+      this.songService.incrementPlayCount(song.songId).subscribe({
+        next: () => {
+          song.playCount = (song.playCount || 0) + 1;
+        },
+        error: (err: any) => console.error('Failed to update play count:', err)
+      });
+    }
+
+    // NEW: Log the play to the history table and refresh the row
+    if (song.songId) {
+      this.historyService.logPlay(song.songId).subscribe({
+        next: () => this.fetchRecentHistory(), // Refresh history row instantly
+        error: (err: any) => console.error('Failed to log history:', err)
+      });
+    }
   }
 
-  // ---  NEW: PLAYLIST MODAL LOGIC  ---
+  // --- PLAYLIST MODAL LOGIC ---
 
   openPlaylistModal(event: Event, song: any) {
-    event.stopPropagation(); // Prevent the song from playing when clicking the + button
+    event.stopPropagation(); 
     this.selectedSongForPlaylist = song;
     
-    // Fetch user's playlists right when they open the modal
     this.playlistService.getMyPlaylists().subscribe({
       next: (data: any[]) => {
         this.myPlaylists = data;
@@ -160,6 +192,7 @@ export class Home implements OnInit {
   // ----------------------------------------
 
   getAudioUrl(fileName: string): string {
+    if(!fileName) return ''; // Failsafe
     return `${environment.apiUrl}/songs/play/${fileName}`;
   }
 
