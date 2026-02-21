@@ -1,0 +1,48 @@
+<div class="home-container">
+  
+  <header class="dashboard-header">
+    <div>
+      <h1>My Favorites ❤️</h1>
+      <h2 class="greeting">Your personal music collection</h2>
+    </div>
+    <div class="header-actions">
+      <button routerLink="/home" class="upload-btn">Back to Dashboard</button>
+    </div>
+  </header>
+
+  <div class="music-feed">
+    
+    <div *ngIf="favoriteSongs.length === 0" class="no-songs">
+      <p>You haven't liked any songs yet. Go discover some music!</p>
+    </div>
+
+    <div class="song-grid">
+      <div class="song-card" *ngFor="let song of favoriteSongs" (click)="playSong(song)">
+        
+        <div class="album-art">
+          <img *ngIf="song.coverImageUrl" [src]="getCoverImageUrl(song.coverImageUrl)" alt="Album Art">
+          <div *ngIf="!song.coverImageUrl" class="placeholder-art">🎵</div>
+          <div class="play-overlay">▶</div>
+        </div>
+
+        <div class="song-info">
+          <div class="song-title-row">
+            <h4>{{ song.title }}</h4>
+            <button class="heart-btn liked" (click)="unlikeSong($event, song.songId)">♥</button>
+          </div>
+          <p class="artist-name">{{ song.artistName || 'Unknown Artist' }}</p>
+          <span class="genre-badge">{{ song.genre }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="music-player-bar" *ngIf="currentSong">
+    <div class="now-playing-info">
+      <h4>{{ currentSong.title }}</h4>
+      <p>{{ currentSong.artistName || 'Unknown Artist' }}</p>
+    </div>
+    <audio controls autoplay [src]="getAudioUrl(currentSong.audioFileUrl)"></audio>
+  </div>
+
+</div>

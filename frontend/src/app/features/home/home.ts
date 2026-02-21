@@ -27,21 +27,52 @@ export class Home implements OnInit {
   searchQuery: string = '';
   selectedGenre: string = '';
 
+  likedSongIds: Set<number> = new Set<number>();
+
   ngOnInit() {
     const storedName = this.authService.getUserName();
     this.userName = (storedName && storedName !== 'null') ? storedName : 'User';
     this.userRole = this.authService.getRole() || 'USER';
     this.fetchSongs();
+    this.fetchLikedSongs();
   }
 
   fetchSongs() {
     this.songService.getAllSongs().subscribe({
-      next: (data) => {
+      next: (data: any[]) => { // 👈 FIX: Added : any[]
         this.songs = data;
         console.log('Successfully loaded songs:', this.songs);
       },
-      error: (err) => console.error('Failed to load songs:', err)
+      error: (err: any) => console.error('Failed to load songs:', err) // 👈 FIX: Added : any
     });
+  }
+
+  fetchLikedSongs() {
+    this.songService.getLikedSongs().subscribe({
+      next: (data: any[]) => { // 👈 FIX: Added : any[]
+        this.likedSongIds = new Set(data.map((song: any) => song.songId)); // 👈 FIX: Added (song: any)
+      },
+      error: (err: any) => console.error('Failed to load liked songs:', err) // 👈 FIX: Added : any
+    });
+  }
+
+  toggleLike(event: Event, songId: number) {
+    event.stopPropagation(); 
+    
+    this.songService.toggleLike(songId).subscribe({
+      next: (isLiked: boolean) => { // 👈 FIX: Added : boolean
+        if (isLiked) {
+          this.likedSongIds.add(songId);
+        } else {
+          this.likedSongIds.delete(songId);
+        }
+      },
+      error: (err: any) => console.error('Failed to toggle like:', err) // 👈 FIX: Added : any
+    });
+  }
+
+  isLiked(songId: number): boolean {
+    return this.likedSongIds.has(songId);
   }
 
   onSearch() {
@@ -50,8 +81,8 @@ export class Home implements OnInit {
       return;
     }
     this.songService.searchSongsByTitle(this.searchQuery).subscribe({
-      next: (data) => this.songs = data,
-      error: (err) => console.error('Search failed:', err)
+      next: (data: any[]) => this.songs = data, // 👈 FIX: Added : any[]
+      error: (err: any) => console.error('Search failed:', err) // 👈 FIX: Added : any
     });
   }
 
@@ -61,8 +92,8 @@ export class Home implements OnInit {
       return;
     }
     this.songService.filterSongsByGenre(this.selectedGenre).subscribe({
-      next: (data) => this.songs = data,
-      error: (err) => console.error('Filter failed:', err)
+      next: (data: any[]) => this.songs = data, // 👈 FIX: Added : any[]
+      error: (err: any) => console.error('Filter failed:', err) // 👈 FIX: Added : any
     });
   }
 
@@ -81,10 +112,9 @@ export class Home implements OnInit {
     return `${environment.apiUrl}/songs/play/${fileName}`;
   }
 
-  // --- NEW: Generate the URL for the cover image ---
   getCoverImageUrl(fileName: string | null): string {
     if (!fileName) {
-      return 'assets/default-cover.jpg'; // Fallback just in case
+      return 'assets/default-cover.jpg'; 
     }
     return `${environment.apiUrl}/songs/image/${fileName}`;
   }

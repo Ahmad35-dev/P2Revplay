@@ -9,6 +9,11 @@
       <button *ngIf="userRole === 'ARTIST'" routerLink="/upload" class="upload-btn">
         + Upload Music
       </button>
+
+      <button routerLink="/favorites" class="upload-btn">
+        ❤️ Favorites
+      </button>
+
       <button (click)="onLogout()" class="logout-btn">Logout</button>
     </div>
   </header>
@@ -53,7 +58,16 @@
         </div>
 
         <div class="song-info">
-          <h4>{{ song.title }}</h4>
+          <div class="song-title-row">
+            <h4>{{ song.title }}</h4>
+            <button 
+              class="heart-btn" 
+              [class.liked]="isLiked(song.songId)" 
+              (click)="toggleLike($event, song.songId)">
+              {{ isLiked(song.songId) ? '♥' : '♡' }}
+            </button>
+          </div>
+
           <p class="artist-name">{{ song.artistName || 'Unknown Artist' }}</p>
           <span class="genre-badge">{{ song.genre }}</span>
         </div>

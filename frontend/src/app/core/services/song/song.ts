@@ -14,31 +14,39 @@ export class Song {
 
   getAllSongs(): Observable<any[]> {
     const token = this.authService.getToken(); 
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
     return this.http.get<any[]>(this.apiUrl, { headers });
   }
 
   uploadSong(songData: FormData): Observable<any> {
     const token = this.authService.getToken(); 
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
     return this.http.post(this.apiUrl, songData, { headers });
   }
 
-  // --- NEW: Search songs by title ---
   searchSongsByTitle(title: string): Observable<any[]> {
     const token = this.authService.getToken(); 
     const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
     return this.http.get<any[]>(`${this.apiUrl}/search?title=${title}`, { headers });
   }
 
-  // --- NEW: Filter songs by genre ---
   filterSongsByGenre(genre: string): Observable<any[]> {
     const token = this.authService.getToken(); 
     const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
     return this.http.get<any[]>(`${this.apiUrl}/filter?genre=${genre}`, { headers });
+  }
+
+  // --- NEW: Toggle Like on a Song ---
+  toggleLike(songId: number): Observable<boolean> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    return this.http.post<boolean>(`${this.apiUrl}/${songId}/like`, {}, { headers });
+  }
+
+  // --- NEW: Get all Liked Songs ---
+  getLikedSongs(): Observable<any[]> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+    return this.http.get<any[]>(`${this.apiUrl}/liked`, { headers });
   }
 }
