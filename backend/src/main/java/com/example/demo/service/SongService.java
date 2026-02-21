@@ -28,7 +28,7 @@ public class SongService {
     private final ArtistRepository artistRepository;
     private final AlbumRepository albumRepository;
     private final FileStorageService fileStorageService;
-    private final LikedSongRepository likedSongRepository; // 👈 NEW
+    private final LikedSongRepository likedSongRepository;
 
     public SongService(SongRepository songRepository, UserRepository userRepository,
                        ArtistRepository artistRepository, AlbumRepository albumRepository,
@@ -67,8 +67,6 @@ public class SongService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // --- NEW: LIKED SONGS LOGIC ---
-
     @Transactional
     public boolean toggleLikeSong(String email, Long songId) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -76,11 +74,9 @@ public class SongService {
 
         Optional<LikedSong> existingLike = likedSongRepository.findByUserAndSong(user, song);
         if (existingLike.isPresent()) {
-            // If already liked, unlike it!
             likedSongRepository.delete(existingLike.get());
             return false;
         } else {
-            // If not liked, save a new like!
             likedSongRepository.save(new LikedSong(user, song));
             return true;
         }
@@ -95,12 +91,10 @@ public class SongService {
     public List<SongDTO> getLikedSongs(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return likedSongRepository.findByUser(user).stream()
-                .map(LikedSong::getSong) // Get the song from the LikedSong bridge table
-                .map(this::mapToDTO)     // Convert to DTO for the frontend
+                .map(LikedSong::getSong)
+                .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-
-    // --- END NEW LOGIC ---
 
     @Transactional
     public SongDTO uploadSong(String email, String title, String genre, Integer duration,
@@ -168,6 +162,19 @@ public class SongService {
             fileStorageService.deleteFile(song.getCoverImageUrl());
         }
         songRepository.delete(song);
+    }
+
+    // --- NEW: PLAY COUNT TRACKER ---
+    @Transactional
+    public void incrementPlayCount(Long songId) {
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+        // Fix: Since playCount is a Long object, we safely handle nulls and add 1L.
+        Long currentCount = song.getPlayCount() != null ? song.getPlayCount() : 0L;
+        song.setPlayCount(currentCount + 1L);
+
+        songRepository.save(song);
     }
 
     private Artist getArtistByEmail(String email) {

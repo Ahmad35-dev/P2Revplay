@@ -111,23 +111,25 @@ public class SongController {
                 .body(resource);
     }
 
-    // --- NEW: LIKED SONGS ENDPOINTS ---
-
-    // Toggle a like on a song (Requires Login)
     @PostMapping("/{songId}/like")
     public ResponseEntity<Boolean> toggleLikeSong(Authentication authentication, @PathVariable Long songId) {
         return ResponseEntity.ok(songService.toggleLikeSong(authentication.getName(), songId));
     }
 
-    // Check if the current user liked a specific song
     @GetMapping("/{songId}/like-status")
     public ResponseEntity<Boolean> getLikeStatus(Authentication authentication, @PathVariable Long songId) {
         return ResponseEntity.ok(songService.isSongLikedByUser(authentication.getName(), songId));
     }
 
-    // Get the user's Favorite Songs list
     @GetMapping("/liked")
     public ResponseEntity<List<SongDTO>> getLikedSongs(Authentication authentication) {
         return ResponseEntity.ok(songService.getLikedSongs(authentication.getName()));
+    }
+
+    // --- NEW: PLAY COUNT ENDPOINT ---
+    @PostMapping("/{songId}/increment-play")
+    public ResponseEntity<String> incrementPlayCount(@PathVariable Long songId) {
+        songService.incrementPlayCount(songId);
+        return ResponseEntity.ok("{\"message\": \"Play count updated successfully\"}");
     }
 }
