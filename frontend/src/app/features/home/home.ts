@@ -48,7 +48,6 @@ export class Home implements OnInit {
     this.fetchLikedSongs();
     this.fetchRecentHistory(); 
 
-    // 🌟 FIX: Restore the user's specific saved song when they load the dashboard!
     this.audioService.restoreUserSong();
   }
 
@@ -108,6 +107,15 @@ export class Home implements OnInit {
   }
 
   playSong(song: any) {
+    // NEW: Determine which list they clicked from to set the correct queue
+    let currentQueue = this.songs;
+    
+    // If the song isn't in the main list, they must have clicked 'Recently Played'
+    if (!this.songs.some(s => s.songId === song.songId)) {
+      currentQueue = this.recentHistory;
+    }
+
+    // Map properties so the player gets a consistent object structure
     const songToPlay = {
       songId: song.songId,
       title: song.title || song.songTitle,
@@ -116,8 +124,17 @@ export class Home implements OnInit {
       coverImageUrl: song.coverImageUrl || null 
     };
 
+    // Replace the clicked song object in the queue with this mapped one so findIndex matches
+    const mappedQueue = currentQueue.map(s => ({
+      songId: s.songId,
+      title: s.title || s.songTitle,
+      artistName: s.artistName,
+      audioFileUrl: s.audioFileUrl || null,
+      coverImageUrl: s.coverImageUrl || null 
+    }));
+
     // Send to Global Player!
-    this.audioService.playSong(songToPlay);
+    this.audioService.playSong(songToPlay, mappedQueue);
 
     if (song.playCount !== undefined) {
       this.songService.incrementPlayCount(song.songId).subscribe({
@@ -167,9 +184,7 @@ export class Home implements OnInit {
   }
 
   onLogout() {
-    //  FIX: Clears the global player UI when logging out!
     this.audioService.clearSong();
-
     this.authService.logout();       
     this.router.navigate(['/login']); 
   }

@@ -13,11 +13,53 @@
     </div>
     
     <div class="player-center">
-      <audio controls [autoplay]="state.autoplay" [src]="audioService.getAudioUrl(state.song.audioFileUrl)"></audio>
+      <div class="player-controls">
+        
+        <button class="icon-btn" [class.active]="state.isShuffle" (click)="audioService.toggleShuffle()" title="Shuffle">🔀</button>
+
+        <button class="control-btn" title="Previous" (click)="audioService.playPrevious()">⏮</button>
+        
+        <button class="play-pause-btn" (click)="togglePlay(audioPlayer)">
+          {{ isPlaying ? '⏸' : '▶' }}
+        </button>
+        
+        <button class="control-btn" title="Next" (click)="skipNext()">⏭</button>
+
+        <button class="icon-btn" [class.active]="state.repeatMode !== 'off'" (click)="audioService.toggleRepeat()" 
+                [title]="state.repeatMode === 'one' ? 'Repeat One' : 'Repeat All'">
+          {{ state.repeatMode === 'one' ? '🔂' : '🔁' }}
+        </button>
+
+      </div>
+
+      <div class="progress-container">
+        <span class="time-text">{{ formatTime(currentTime) }}</span>
+        <input type="range" class="progress-bar" [max]="duration" [value]="currentTime" (input)="seekTo($event, audioPlayer)">
+        <span class="time-text">{{ formatTime(duration) }}</span>
+      </div>
+
+      <audio 
+        #audioPlayer
+        style="display: none;"
+        [autoplay]="state.autoplay" 
+        [volume]="volume"
+        [src]="audioService.getAudioUrl(state.song.audioFileUrl)"
+        (timeupdate)="onTimeUpdate(audioPlayer)"
+        (play)="onAudioPlay()"
+        (pause)="onAudioPause()"
+        (loadedmetadata)="onTimeUpdate(audioPlayer)"
+        (ended)="audioService.playNext(false)">
+      </audio>
     </div>
     
     <div class="player-right">
+      <div class="volume-container">
+        <button class="icon-btn" (click)="toggleMute(audioPlayer)" title="Mute">
+          {{ volume === 0 ? '🔇' : (volume < 0.5 ? '🔉' : '🔊') }}
+        </button>
+        <input type="range" class="progress-bar volume-bar" min="0" max="1" step="0.01" [value]="volume" (input)="setVolume($event, audioPlayer)">
       </div>
+    </div>
 
   </div>
 

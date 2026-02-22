@@ -3,10 +3,14 @@ import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../auth/auth'; 
 
-//  NEW: A smart state object that remembers both the song AND whether it should autoplay!
 export interface PlayerState {
   song: any;
   autoplay: boolean;
+  queue: any[];
+  originalQueue: any[]; // Keeps track of the original order for un-shuffling
+  currentIndex: number;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'all' | 'one';
 }
 
 @Injectable({
@@ -15,11 +19,9 @@ export interface PlayerState {
 export class AudioService {
   private authService = inject(AuthService); 
   
-  //  FIX: Updated the BehaviorSubject to hold our new PlayerState
   private playerStateSubject = new BehaviorSubject<PlayerState | null>(null);
   playerState$ = this.playerStateSubject.asObservable();
 
-  //  FIX: Safely extracts the user's actual email/ID directly from their secure JWT token!
   private getUniqueUserId(): string {
     const token = this.authService.getToken();
     if (!token) return 'unknown_user';
@@ -33,27 +35,127 @@ export class AudioService {
     }
   }
 
-  playSong(song: any) {
-    //  When a user clicks a song, we tell it to Autoplay!
-    this.playerStateSubject.next({ song, autoplay: true });
+  playSong(song: any, queue: any[] = []) {
+    const currentState = this.playerStateSubject.getValue();
+    const isShuffle = currentState ? currentState.isShuffle : false;
+    const repeatMode = currentState ? currentState.repeatMode : 'off';
+    
+    let originalQueue = queue.length > 0 ? [...queue] : currentState?.originalQueue || [song];
+    let currentQueue = [...originalQueue];
+
+    if (isShuffle) {
+      // Shuffle the queue, but put the selected song first
+      const otherSongs = currentQueue.filter(s => s.songId !== song.songId);
+      for (let i = otherSongs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherSongs[i], otherSongs[j]] = [otherSongs[j], otherSongs[i]];
+      }
+      currentQueue = [song, ...otherSongs];
+    }
+
+    let index = currentQueue.findIndex(s => s.songId === song.songId);
+    if (index === -1) {
+      currentQueue = [song];
+      originalQueue = [song];
+      index = 0;
+    }
+
+    const newState: PlayerState = { 
+      song, autoplay: true, queue: currentQueue, originalQueue, currentIndex: index, isShuffle, repeatMode
+    };
+    this.playerStateSubject.next(newState);
 
     const userId = this.getUniqueUserId();
     if (userId !== 'unknown_user') {
-      localStorage.setItem(`savedSong_${userId}`, JSON.stringify(song));
+      localStorage.setItem(`savedState_${userId}`, JSON.stringify(newState));
     }
+  }
+
+  playNext(manualSkip: boolean = false) {
+    const state = this.playerStateSubject.getValue();
+    if (!state || !state.queue || state.queue.length === 0) return;
+
+    // If auto-advancing and repeat ONE is on, just play the same song again
+    if (!manualSkip && state.repeatMode === 'one') {
+      this.playSong(state.song, state.originalQueue);
+      return;
+    }
+
+    let nextIndex = state.currentIndex + 1;
+    
+    if (nextIndex >= state.queue.length) {
+      if (state.repeatMode === 'off' && !manualSkip) {
+        // End of queue, don't repeat
+        return;
+      }
+      nextIndex = 0; // Loop back
+    }
+
+    this.playSong(state.queue[nextIndex], state.originalQueue);
+  }
+
+  playPrevious() {
+    const state = this.playerStateSubject.getValue();
+    if (!state || !state.queue || state.queue.length === 0) return;
+
+    let prevIndex = state.currentIndex - 1;
+    if (prevIndex < 0) {
+      prevIndex = state.queue.length - 1;
+    }
+
+    this.playSong(state.queue[prevIndex], state.originalQueue);
+  }
+
+  toggleShuffle() {
+    const state = this.playerStateSubject.getValue();
+    if (!state) return;
+
+    const newShuffleState = !state.isShuffle;
+    let newQueue = [...state.originalQueue];
+    let newIndex = 0;
+
+    if (newShuffleState) {
+      const otherSongs = newQueue.filter(s => s.songId !== state.song.songId);
+      for (let i = otherSongs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherSongs[i], otherSongs[j]] = [otherSongs[j], otherSongs[i]];
+      }
+      newQueue = [state.song, ...otherSongs];
+    } else {
+      newIndex = newQueue.findIndex(s => s.songId === state.song.songId);
+    }
+
+    this.playerStateSubject.next({
+      ...state,
+      isShuffle: newShuffleState,
+      queue: newQueue,
+      currentIndex: newIndex
+    });
+  }
+
+  toggleRepeat() {
+    const state = this.playerStateSubject.getValue();
+    if (!state) return;
+
+    let nextMode: 'off' | 'all' | 'one' = 'off';
+    if (state.repeatMode === 'off') nextMode = 'all';
+    else if (state.repeatMode === 'all') nextMode = 'one';
+
+    this.playerStateSubject.next({ ...state, repeatMode: nextMode });
   }
 
   restoreUserSong() {
     if (!this.playerStateSubject.getValue()) {
       const userId = this.getUniqueUserId();
-      const savedSong = localStorage.getItem(`savedSong_${userId}`);
+      const savedState = localStorage.getItem(`savedState_${userId}`);
       
-      if (savedSong) {
+      if (savedState) {
         try {
-          //  When restoring from memory on login, Autoplay is strictly FALSE!
-          this.playerStateSubject.next({ song: JSON.parse(savedSong), autoplay: false });
+          const parsedState = JSON.parse(savedState);
+          parsedState.autoplay = false; 
+          this.playerStateSubject.next(parsedState);
         } catch (error) {
-          console.error('Failed to parse saved song', error);
+          console.error('Failed to parse saved state', error);
         }
       }
     }
