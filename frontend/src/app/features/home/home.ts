@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
 import { FormsModule } from '@angular/forms'; 
@@ -7,7 +7,7 @@ import { Song } from '../../core/services/song/song';
 import { Playlist } from '../../core/services/playlist/playlist'; 
 import { History } from '../../core/services/history/history'; 
 import { AudioService } from '../../core/services/audio/audio'; 
-import { Album } from '../../core/services/album/album'; // NEW: Import Album Service
+import { Album } from '../../core/services/album/album'; 
 import { environment } from '../../../environments/environment'; 
 
 @Component({
@@ -23,13 +23,16 @@ export class Home implements OnInit {
   private playlistService = inject(Playlist); 
   private historyService = inject(History); 
   private audioService = inject(AudioService); 
-  private albumService = inject(Album); // NEW: Inject Album Service
+  private albumService = inject(Album); 
   private router = inject(Router);
+  
+  // NEW: Inject ChangeDetectorRef for instant UI updates
+  private cdr = inject(ChangeDetectorRef);
 
   userName: string = '';
   userRole: string = '';
   songs: any[] = []; 
-  albums: any[] = []; // NEW: Array to hold Trending Albums
+  albums: any[] = []; 
   
   searchQuery: string = '';
   selectedGenre: string = '';
@@ -42,6 +45,10 @@ export class Home implements OnInit {
 
   recentHistory: any[] = [];
 
+  // NEW: Track which song is actively playing for the Pause button
+  currentPlayingSongId: number | null = null;
+  isCurrentlyPlaying: boolean = false;
+
   ngOnInit() {
     const storedName = this.authService.getUserName();
     this.userName = (storedName && storedName !== 'null') ? storedName : 'User';
@@ -50,9 +57,22 @@ export class Home implements OnInit {
     this.fetchSongs();
     this.fetchLikedSongs();
     this.fetchRecentHistory(); 
-    this.fetchAlbums(); // NEW: Fetch albums on load
+    this.fetchAlbums(); 
 
     this.audioService.restoreUserSong();
+
+    // NEW: Subscribe to Global Player state so HTML knows when to show Pause
+    this.audioService.playerState$.subscribe(state => {
+      if (state && state.song) {
+        this.currentPlayingSongId = state.song.songId;
+        this.isCurrentlyPlaying = state.isPlaying;
+      } else {
+        this.currentPlayingSongId = null;
+        this.isCurrentlyPlaying = false;
+      }
+      // NEW: Tell HTML to update the UI immediately!
+      this.cdr.detectChanges();
+    });
   }
 
   fetchSongs() {
@@ -62,7 +82,6 @@ export class Home implements OnInit {
     });
   }
 
-  // NEW: Fetch Trending Albums
   fetchAlbums() {
     this.albumService.getAllAlbums().subscribe({
       next: (data: any[]) => this.albums = data,
@@ -79,7 +98,21 @@ export class Home implements OnInit {
 
   fetchRecentHistory() {
     this.historyService.getRecentHistory().subscribe({
-      next: (data: any[]) => this.recentHistory = data,
+      next: (data: any[]) => {
+        // THE FIX: Filter out duplicate songs!
+        // This keeps only the MOST RECENT play of a song, just like Spotify.
+        const uniqueSongs = new Map();
+        
+        data.forEach(item => {
+          // If we haven't seen this song ID yet, add it to our list
+          if (!uniqueSongs.has(item.songId)) {
+            uniqueSongs.set(item.songId, item);
+          }
+        });
+
+        // Convert the unique map back into an array for the HTML to display
+        this.recentHistory = Array.from(uniqueSongs.values());
+      },
       error: (err: any) => console.error('Failed to load history:', err)
     });
   }
@@ -118,7 +151,6 @@ export class Home implements OnInit {
     this.fetchSongs();
   }
 
-  // NEW: Navigate to the public album page
   goToAlbum(albumId: number) {
     this.router.navigate(['/album', albumId]);
   }
@@ -130,36 +162,55 @@ export class Home implements OnInit {
       currentQueue = this.recentHistory;
     }
 
+    // THE FIX: Look up the full song data so we guarantee we have the MP3 URL!
+    const fullSong = this.songs.find(s => s.songId == song.songId) || song;
+
+    // THE FIX: Check if the song is already playing, and if it has finished!
+    const audioEl = document.querySelector('audio');
+    const isSameSong = this.currentPlayingSongId === song.songId;
+    const isFinished = audioEl ? audioEl.ended : false;
+
+    // Map the data using 'fullSong' so the URL is never null
     const songToPlay = {
-      songId: song.songId,
-      title: song.title || song.songTitle,
-      artistName: song.artistName,
-      audioFileUrl: song.audioFileUrl || null,
-      coverImageUrl: song.coverImageUrl || null 
+      songId: fullSong.songId,
+      title: fullSong.title || fullSong.songTitle,
+      artistName: fullSong.artistName,
+      audioFileUrl: fullSong.audioFileUrl || null,
+      coverImageUrl: fullSong.coverImageUrl || null 
     };
 
-    const mappedQueue = currentQueue.map(s => ({
-      songId: s.songId,
-      title: s.title || s.songTitle,
-      artistName: s.artistName,
-      audioFileUrl: s.audioFileUrl || null,
-      coverImageUrl: s.coverImageUrl || null 
-    }));
+    // Ensure the entire queue also has their full URLs!
+    const mappedQueue = currentQueue.map(s => {
+      const fullQueueSong = this.songs.find(fs => fs.songId == s.songId) || s;
+      return {
+        songId: fullQueueSong.songId,
+        title: fullQueueSong.title || fullQueueSong.songTitle,
+        artistName: fullQueueSong.artistName,
+        audioFileUrl: fullQueueSong.audioFileUrl || null,
+        coverImageUrl: fullQueueSong.coverImageUrl || null 
+      };
+    });
 
+    // 1. Send to the Audio Service (it will handle the actual pausing/resuming)
     this.audioService.playSong(songToPlay, mappedQueue);
 
-    if (song.playCount !== undefined) {
-      this.songService.incrementPlayCount(song.songId).subscribe({
-        next: () => song.playCount = (song.playCount || 0) + 1,
-        error: (err: any) => console.error('Failed to update play count:', err)
-      });
-    }
+    // 2. SMART LOGIC: Only increase count if it's a NEW song, or a RESTART of a finished song
+    if (!isSameSong || isFinished) {
+      
+      if (song.playCount !== undefined) {
+        this.songService.incrementPlayCount(song.songId).subscribe({
+          next: () => song.playCount = (song.playCount || 0) + 1,
+          error: (err: any) => console.error('Failed to update play count:', err)
+        });
+      }
 
-    if (song.songId) {
-      this.historyService.logPlay(song.songId).subscribe({
-        next: () => this.fetchRecentHistory(), 
-        error: (err: any) => console.error('Failed to log history:', err)
-      });
+      if (song.songId) {
+        this.historyService.logPlay(song.songId).subscribe({
+          next: () => this.fetchRecentHistory(), 
+          error: (err: any) => console.error('Failed to log history:', err)
+        });
+      }
+      
     }
   }
 

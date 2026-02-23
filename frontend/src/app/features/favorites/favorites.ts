@@ -1,9 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core'; 
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
 import { Song } from '../../core/services/song/song'; 
-import { AudioService } from '../../core/services/audio/audio'; //  NEW: Global Player
-import { History } from '../../core/services/history/history'; //  NEW: History tracking
+import { AudioService } from '../../core/services/audio/audio'; 
+import { History } from '../../core/services/history/history'; 
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -17,14 +17,31 @@ export class Favorites implements OnInit {
   private songService = inject(Song);
   private router = inject(Router);
   
-  //  Injecting Global Services
   private audioService = inject(AudioService);
   private historyService = inject(History);
+  
+  // NEW: This forces Angular to instantly refresh the HTML when the song changes
+  private cdr = inject(ChangeDetectorRef); 
 
   favoriteSongs: any[] = []; 
 
+  currentPlayingSongId: number | null = null;
+  isCurrentlyPlaying: boolean = false;
+
   ngOnInit() {
     this.fetchFavorites();
+
+    this.audioService.playerState$.subscribe(state => {
+      if (state && state.song) {
+        this.currentPlayingSongId = state.song.songId;
+        this.isCurrentlyPlaying = state.isPlaying;
+      } else {
+        this.currentPlayingSongId = null;
+        this.isCurrentlyPlaying = false;
+      }
+      // THE FIX: Tell HTML to update the UI immediately!
+      this.cdr.detectChanges(); 
+    });
   }
 
   fetchFavorites() {
@@ -34,21 +51,17 @@ export class Favorites implements OnInit {
     });
   }
 
-  // If they click the heart on this page, it "unlikes" it and removes it from the screen
   unlikeSong(event: Event, songId: number) {
     event.stopPropagation(); 
     this.songService.toggleLike(songId).subscribe({
       next: () => {
-        // Filter out the song they just unliked so it disappears instantly
         this.favoriteSongs = this.favoriteSongs.filter((song: any) => song.songId !== songId);
       },
       error: (err: any) => console.error('Failed to unlike song:', err)
     });
   }
 
-  //  UPDATED: Sends the clicked song and the whole Favorites queue to the Global Player
   playSong(song: any) {
-    // 1. Map the favorites list into a queue format your player understands
     const mappedQueue = this.favoriteSongs.map((s: any) => ({
       songId: s.songId,
       title: s.title || s.songTitle,
@@ -57,29 +70,44 @@ export class Favorites implements OnInit {
       coverImageUrl: s.coverImageUrl || null 
     }));
 
-    // 2. Find the exact song they clicked
-    const songToPlay = mappedQueue.find((s: any) => s.songId === song.songId);
+    // THE FIX: Using loose equality (==) just in case one is a string and one is a number
+    const songToPlay = mappedQueue.find((s: any) => s.songId == song.songId);
 
     if (songToPlay) {
-      // 3. Send to Global Player!
+      const audioEl = document.querySelector('audio');
+      const isSameSong = this.currentPlayingSongId == song.songId;
+      const isFinished = audioEl ? audioEl.ended : false;
+
       this.audioService.playSong(songToPlay, mappedQueue);
 
-      // 4. Update the play count
-      this.songService.incrementPlayCount(song.songId).subscribe({
-        next: () => song.playCount = (song.playCount || 0) + 1,
-        error: (err: any) => console.error('Failed to update play count:', err)
-      });
+      if (!isSameSong || isFinished) {
+        this.songService.incrementPlayCount(song.songId).subscribe({
+          next: () => song.playCount = (song.playCount || 0) + 1,
+          error: (err: any) => console.error('Failed to update play count:', err)
+        });
 
-      // 5. Add to Recently Played History
-      this.historyService.logPlay(song.songId).subscribe({
-        error: (err: any) => console.error('Failed to log history:', err)
-      });
+        this.historyService.logPlay(song.songId).subscribe({
+          error: (err: any) => console.error('Failed to log history:', err)
+        });
+      }
     }
   }
 
-  //  NEW: Convenience method to play the whole favorites list from track 1
+  // NEW: Helper to check if ANY favorite is currently playing for the big button
+  isFavoritePlaying(): boolean {
+    return this.isCurrentlyPlaying && this.favoriteSongs.some((s: any) => s.songId == this.currentPlayingSongId);
+  }
+
+  // UPDATED: Smart toggle for the big Play All button
   playAllFavorites() {
-    if (this.favoriteSongs.length > 0) {
+    if (this.favoriteSongs.length === 0) return;
+
+    if (this.isFavoritePlaying()) {
+      // If a favorite is actively playing, clicking the big button pauses it!
+      const activeSong = this.favoriteSongs.find((s: any) => s.songId == this.currentPlayingSongId);
+      if (activeSong) this.playSong(activeSong);
+    } else {
+      // Otherwise, start from the first track
       this.playSong(this.favoriteSongs[0]);
     }
   }

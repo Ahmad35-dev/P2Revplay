@@ -3,7 +3,7 @@
   <header class="dashboard-header">
     <div>
       <h1>Welcome to RevPlay!</h1>
-      <h2 class="greeting">Hi, {{ userName }}!</h2>
+      <!-- <h2 class="greeting">Hi, {{ userName }}!</h2> -->
     </div>
     <div class="header-actions">
       <button *ngIf="userRole === 'ARTIST'" routerLink="/upload" class="upload-btn">
@@ -54,7 +54,10 @@
           <div class="album-art">
             <img *ngIf="history.coverImageUrl" [src]="getCoverImageUrl(history.coverImageUrl)" alt="Album Art">
             <div *ngIf="!history.coverImageUrl" class="placeholder-art">🎵</div>
-            <div class="play-overlay">▶</div>
+            <div class="play-overlay" [class.active]="currentPlayingSongId === history.songId && isCurrentlyPlaying">
+              <span *ngIf="currentPlayingSongId === history.songId && isCurrentlyPlaying">⏸</span>
+              <span *ngIf="!(currentPlayingSongId === history.songId && isCurrentlyPlaying)">▶</span>
+            </div>
           </div>
 
           <div class="song-info">
@@ -129,7 +132,10 @@
         <div class="album-art">
           <img *ngIf="song.coverImageUrl" [src]="getCoverImageUrl(song.coverImageUrl)" alt="Album Art">
           <div *ngIf="!song.coverImageUrl" class="placeholder-art">🎵</div>
-          <div class="play-overlay">▶</div>
+          <div class="play-overlay" [class.active]="currentPlayingSongId === song.songId && isCurrentlyPlaying">
+            <span *ngIf="currentPlayingSongId === song.songId && isCurrentlyPlaying">⏸</span>
+            <span *ngIf="!(currentPlayingSongId === song.songId && isCurrentlyPlaying)">▶</span>
+          </div>
         </div>
 
         <div class="song-info">

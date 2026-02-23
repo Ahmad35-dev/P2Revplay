@@ -235,7 +235,9 @@ h3 {
   box-shadow: 0 8px 15px rgba(0,0,0,0.3);
 }
 
-.song-card:hover .play-overlay {
+/* 🌟 Show overlay on hover OR if it is actively playing (.active) */
+.song-card:hover .play-overlay,
+.play-overlay.active {
   opacity: 1;
   margin-top: 0; 
 }
