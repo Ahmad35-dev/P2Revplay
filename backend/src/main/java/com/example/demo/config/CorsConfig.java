@@ -14,7 +14,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // 👈 Applies to ALL endpoints (/api/auth, /api/songs, etc.)
-                        .allowedOrigins("http://localhost:4200") // 👈 Your Angular app URL
+                        .allowedOrigins("http://localhost:4200","http://13.126.48.154") // 👈 Your Angular app URL and deployed ui
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // 👈 Allowed request types
                         .allowedHeaders("*") // 👈 Allows all headers (Crucial for your JWT 'Authorization' header!)
                         .allowCredentials(true); // 👈 Allows credentials/tokens to be sent
