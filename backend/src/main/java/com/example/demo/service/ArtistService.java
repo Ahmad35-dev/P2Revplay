@@ -83,10 +83,10 @@ public class ArtistService {
 
         if (artistSongs != null && !artistSongs.isEmpty()) {
             response.setTotalSongsUploaded(artistSongs.size());
-            response.setTotalAllTimePlays(artistSongs.stream().mapToLong(s -> s.getPlayCount() != null ? s.getPlayCount() : 0).sum());
+            response.setTotalAllTimePlays(artistSongs.stream().mapToLong(s -> s.getPlayCount() != null ? s.getPlayCount() : 0L).sum());
 
             List<SongPerformanceDTO> topSongs = artistSongs.stream()
-                    .sorted((s1, s2) -> Long.compare(s2.getPlayCount() != null ? s2.getPlayCount() : 0, s1.getPlayCount() != null ? s1.getPlayCount() : 0))
+                    .sorted((s1, s2) -> Long.compare(s2.getPlayCount() != null ? s2.getPlayCount() : 0L, s1.getPlayCount() != null ? s1.getPlayCount() : 0L))
                     .limit(10)
                     .map(song -> {
                         SongPerformanceDTO dto = new SongPerformanceDTO();
